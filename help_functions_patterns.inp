@@ -58,19 +58,19 @@ function series is_body_short(const bundle d)
 end function
 
 function series is_bottom_shadow_long(const bundle d)
-    return d.bottom_shadow_len_percent > d.bottom_shadow_len_qIII
+    return d.bottom_shadow_len > d.bottom_shadow_len_qIII
 end function
 
 function series is_bottom_shadow_short(const bundle d)
-    return d.bottom_shadow_len_percent < d.bottom_shadow_len_qI
+    return d.bottom_shadow_len < d.bottom_shadow_len_qI
 end function
 
 function series is_top_shadow_long(const bundle d)
-    return d.top_shadow_len_percent > d.top_shadow_len_qIII
+    return d.top_shadow_len > d.top_shadow_len_qIII
 end function
 
 function series is_top_shadow_short(const bundle d)
-    return d.top_shadow_len_percent < d.top_shadow_len_qI
+    return d.top_shadow_len < d.top_shadow_len_qI
 end function
 
 function series is_doji(const bundle d)
@@ -116,30 +116,17 @@ function void init(bundle *self, const list L)
 
     series self.body_len = set_body_len(self)
 
-    self.top_shadow_len_percent = top_shadow_len(self) / (self.body_len + 1)
-    self.bottom_shadow_len_percent = bottom_shadow_len(self) / (self.body_len + 1)
+    self.top_shadow_len = top_shadow_len(self) / (self.body_len + 1)
+    self.bottom_shadow_len = bottom_shadow_len(self) / (self.body_len + 1)
 
     series self.body_len_qI = set_quantile(self.body_len, self.quartile_range, 0.25)
     series self.body_len_qIII = set_quantile(self.body_len, self.quartile_range, 0.75)
-    series self.top_shadow_len_qI = set_quantile(self.top_shadow_len_percent, self.quartile_range, 0.25)
-    series self.top_shadow_len_qIII = set_quantile(self.top_shadow_len_percent, self.quartile_range, 0.75)
-    series self.bottom_shadow_len_qI = set_quantile(self.bottom_shadow_len_percent, self.quartile_range, 0.25)
-    series self.bottom_shadow_len_qIII = set_quantile(self.bottom_shadow_len_percent, self.quartile_range, 0.75)
+    series self.top_shadow_len_qI = set_quantile(self.top_shadow_len, self.quartile_range, 0.25)
+    series self.top_shadow_len_qIII = set_quantile(self.top_shadow_len, self.quartile_range, 0.75)
+    series self.bottom_shadow_len_qI = set_quantile(self.bottom_shadow_len, self.quartile_range, 0.25)
+    series self.bottom_shadow_len_qIII = set_quantile(self.bottom_shadow_len, self.quartile_range, 0.75)
 
     series self.trend = trend(self, self.trend_range)
-end function
-
-function matrix set_quantile_old(const series s, scalar step, scalar quantile)
-    matrix M = zeros($nobs,1)
-    M[1:step] = quantile({s}[1: step], quantile)
-    loop i = (step + 1 )..$nobs
-        catch M[i] = quantile({s}[i - step: i], quantile)
-        err = $error
-        errString = sprintf("%d %d %d %d - %d",i,$nobs,step, rows({s}), sum(!ok(s)))
-        errorif(err, errString)
-    endloop
-
-    return M
 end function
 
 function series set_quantile(const series s, scalar step, scalar quantile)
@@ -155,10 +142,5 @@ function series set_quantile(const series s, scalar step, scalar quantile)
     return ret_s
 end function
 
-function void print_list(list L)
-    loop i = 1..nelem(L)
-        print sum(L[i])
-    endloop
-end function
 
 
