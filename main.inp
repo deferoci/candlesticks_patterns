@@ -48,7 +48,7 @@ set stopwatch
 # Set 1 for tests #
 ###################
 
-loop n_stock = 1 .. 1#nelem(stocks)
+loop n_stock = 1 .. nelem(stocks)
     stock_sym = stocks[n_stock]
     list Lget = yahoo_full("@stock_sym")
 
@@ -62,12 +62,23 @@ loop n_stock = 1 .. 1#nelem(stocks)
         
         outMatrix = {}
 
+        trdR_bigger = 0
+        qntR_bigger = 0
+
         loop trdR = 1 .. nelem(settings.trend_ranges)
+            if settings.trend_ranges[trdR] > $nobs
+                trdR_bigger = 1
+            endif
+
             loop qntR = 1 .. nelem(settings.quantile_ranges) 
-                
+                if settings.quantile_ranges[qntR] > $nobs
+                    qntR_bigger = 1
+                endif
+
                 bundle b = null
-                b.trend_range = settings.trend_ranges[trdR]
-                b.quantile_ranges = settings.quantile_ranges[qntR]
+                
+                b.trend_range = trdR_bigger ? $nobs : settings.trend_ranges[trdR]
+                b.quantile_range = qntR_bigger ? $nobs : settings.quantile_ranges[qntR]
                 init(&b, L)
                 
                 loop retD = 1 .. nelem(settings.return_days)
@@ -84,7 +95,13 @@ loop n_stock = 1 .. 1#nelem(stocks)
                         flush
                     endloop
                 endloop
+            if qntR_bigger
+                break
+            endif
             endloop
+        if trdR_bigger
+            break
+        endif
         endloop
 
         outfile "results_candlesticks.csv" --quiet --append
@@ -96,7 +113,9 @@ loop n_stock = 1 .. 1#nelem(stocks)
     delete L --force
     delete Lget --force
     delete temp_series --force
+    printf("Done %g of %g\n",n_stock,nelem(stocks))
 
+    smpl full
 endloop
 
 e = $stopwatch
