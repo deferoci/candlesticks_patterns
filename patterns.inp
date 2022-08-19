@@ -2,12 +2,13 @@
 #-------------------------------------------------------------------------------
 
 function series hammer(const bundle d, scalar l[0:1:0]) 
+    series isBlack = !is_white(d)
     series shortBody = is_body_short(d)
     series longBottomShadow = is_bottom_shadow_long(d)
     series shortUpShadow = top_shadow_len(d) <= (l * body_len(d))
     series trend = lag(1, d.trend) < 0
     series notDoji = !is_doji(d)
-    list l_and = shortBody longBottomShadow shortUpShadow trend notDoji
+    list l_and = isBlack shortBody longBottomShadow shortUpShadow trend notDoji
     series out = and(l_and)
     string description = sprintf("Hammer - l = %g",l)
     setinfo out --description="@description"
