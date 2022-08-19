@@ -57,7 +57,6 @@ function series is_body_short(const bundle d)
     return d.body_len < d.body_len_qI
 end function
 
-
 function series is_bottom_shadow_long(const bundle d)
     return d.bottom_shadow_len_percent > d.bottom_shadow_len_qIII
 end function
@@ -72,6 +71,10 @@ end function
 
 function series is_top_shadow_short(const bundle d)
     return d.top_shadow_len_percent < d.top_shadow_len_qI
+end function
+
+function series is_doji(const bundle d)
+    return d.open == d.close
 end function
 
 function series find_trend(const series s)
@@ -113,24 +116,8 @@ function void init(bundle *self, const list L)
 
     series self.body_len = set_body_len(self)
 
-    series top_shadow_len_percent = 0
-    series bottom_shadow_len_percent = 0
-
-    loop i = 1 .. $nobs
-        if self.body_len[i] != 0 
-            top_shadow_len_percent[i] = top_shadow_len(self)[i] / self.body_len[i]
-            bottom_shadow_len_percent[i] = bottom_shadow_len(self)[i] / self.body_len[i]
-        else 
-            top_shadow_len_percent[i] = $huge
-            bottom_shadow_len_percent[i] = $huge
-            endif
-    endloop
-
-    self.top_shadow_len_percent = top_shadow_len_percent
-    self.bottom_shadow_len_percent = bottom_shadow_len_percent
-
-    delete top_shadow_len_percent --force
-    delete bottom_shadow_len_percent --force
+    self.top_shadow_len_percent = top_shadow_len(self) / (self.body_len + 1)
+    self.bottom_shadow_len_percent = bottom_shadow_len(self) / (self.body_len + 1)
 
     series self.body_len_qI = set_quantile(self.body_len, self.quartile_range, 0.25)
     series self.body_len_qIII = set_quantile(self.body_len, self.quartile_range, 0.75)
@@ -142,7 +129,7 @@ function void init(bundle *self, const list L)
     series self.trend = trend(self, self.trend_range)
 end function
 
-function matrix set_quantile(const series s, scalar step, scalar quantile)
+function matrix set_quantile_old(const series s, scalar step, scalar quantile)
     matrix M = zeros($nobs,1)
     M[1:step] = quantile({s}[1: step], quantile)
     loop i = (step + 1 )..$nobs
@@ -153,6 +140,19 @@ function matrix set_quantile(const series s, scalar step, scalar quantile)
     endloop
 
     return M
+end function
+
+function series set_quantile(const series s, scalar step, scalar quantile)
+    set skip_missing off
+    L = lags(step, s)
+    L = s || L
+    M = {L}
+    M = M'
+    series ret_s = vec(quantile(M, quantile))
+    scalar first = ret_s[step +1]
+    ret_s = ok(ret_s) ? ret_s : first
+
+    return ret_s
 end function
 
 function void print_list(list L)
