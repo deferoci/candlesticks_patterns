@@ -1,5 +1,5 @@
 # PATTERNS
-#-------------------------------------------------------------------------------
+#======================================================================
 
 function series hammer(const bundle d, scalar l[0:1:0]) 
     series isBlack = !is_white(d)
@@ -10,8 +10,9 @@ function series hammer(const bundle d, scalar l[0:1:0])
     series notDoji = !is_doji(d)
     list l_and = isBlack shortBody longBottomShadow shortUpShadow trend notDoji
     series out = and(l_and)
-    string description = sprintf("Hammer - l = %g",l)
-    setinfo out --description="@description"
+
+    set_description(&out, sprintf("Hammer - l = %g",l))
+
     return out 
 end function
 
@@ -24,12 +25,11 @@ function series dark_cloud_cover(const bundle d)
     series trend = lag(2, d.trend) > 0
     series notDoji = !is_doji(d)
     list l_and = precWhite currentBlack precLong openAbovePrec closeBelowMeanPrec trend notDoji
-    series out = and(&l_and)
-    string description = "Dark Cloud Cover"
-    setinfo out --description="@description"
+    series out = and(l_and)
+
+    set_description(&out, "Dark Cloud Cover")
+
     return out
-    #series out =  precWhite * currentBlack * precLong * openAbovePrec * closeBelowMeanPrec * trend
-    #return out
 end function
 
 function series piercing_lines(const bundle d)
@@ -41,10 +41,12 @@ function series piercing_lines(const bundle d)
     series trend = lag(2, d.trend) < 0
     series notDoji = !is_doji(d)
     list l_and = precBlack currentWhite precLong openBelowPrec closeAboveMeanPrec trend notDoji
-    
-    return and(&l_and)
-    #series out =  precWhite * currentBlack * precLong * openAbovePrec * closeBelowMeanPrec * trend
-    #return out
+    series out = and(l_and)
+
+    set_description(&out, "Piercing Lines")
+
+    return out
+
 end function
 
 function series evening_star(const bundle d)
@@ -59,10 +61,11 @@ function series evening_star(const bundle d)
     series trend = lag(3, d.trend) > 0
     series notDoji = !is_doji(d)
     list l_and = firstWhite firstLong secondBlack seconShort lastBlack lastLong gapFirstSecond gapSecondLast time notDoji
-    
-    return and(&l_and)
-    #out = firstWhite ~ firstLong ~ secondBlack ~ seconShort ~ lastBlack ~ lastLong ~ gapFirstSecond ~ gapSecondLast ~ trend 
-    #return prodr(out)
+    out = and(l_and)
+
+    set_description(&out, "Evening Star")
+
+    return out
 end function
 
 function series morning_star(const bundle d)
@@ -77,10 +80,11 @@ function series morning_star(const bundle d)
     series trend = lag(3, d.trend) < 0 
     series notDoji = !is_doji(d)
     list l_and = firstBlack firstLong secondBlack seconShort lastWhite lastLong gapFirstSecond gapSecondLast time notDoji
+    out = and(l_and)
 
-    return and(&l_and)
-    #out = firstBlack ~ firstLong ~ secondBlack ~ seconShort ~ lastWhite ~ lastLong ~ gapFirstSecond ~ gapSecondLast ~ trend
-    #return prodr(out)
+    set_description(&out, "Morning Star")    
+
+    return out
 end function
 
 function series rising_three(const bundle d, scalar days[3::3], scalar w[::0], bool inBody[0])
@@ -108,12 +112,16 @@ function series rising_three(const bundle d, scalar days[3::3], scalar w[::0], b
     series nBlack = ( sum(blackCandles) >= (days - w) )
     series trend = lag(days + 2, d.trend) > 0 
     tempL += nBlack trend
-    return and(tempL)
+    series out = and(tempL)
+
+    set_description(&out, sprintf("Rising Three, days: %d, w: %d, inBody: %d", days, w, inBody))    
+
+    return out
 end function
 
 function series falling_three(const bundle d, scalar days[3::3], scalar b[::0], bool inBody[0])
-    #days numero di giorni tra la prima e ultima candela nera
-    #b numero di candele nere che possono esserci tra primo e ultimo
+    # days: days between first and last black candle
+    # b: max number of black candles allow between first and last
     series firstBlack = lag(days+1, !is_white(d))
     series firstLong = lag(days+1, is_body_long(d))
     series lastBlack = !is_white(d)
@@ -136,6 +144,10 @@ function series falling_three(const bundle d, scalar days[3::3], scalar b[::0], 
     series nWhite = ( sum(whiteCandles) >= (days - b) )
     series trend = lag(days + 2, d.trend) < 0
     tempL += nWhite trend 
-    return and(tempL)
+    series out = and(tempL)
+
+    set_description(&out, sprintf("Falling Three, days: %d, b: %d, inBody: %d", days, b, inBody))   
+
+    return out
 end function
-#add comeme
+
