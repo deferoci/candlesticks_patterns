@@ -23,6 +23,7 @@ epochStart = epochday(1950,01,01)
 epochEnd = epochday(2022,07,31)
 days = dayspan(epochStart, epochEnd, 5)
 
+
 nulldata days --preserve
 setobs 5 "1950-01-01"
 series epoch = epochday($obsdate)
@@ -32,21 +33,19 @@ function_names = getkeys(settings.patterns)
 
 stock_sym = stocks[1]
 
-
+# Perpare result file
 outfile "results_candlesticks.csv" --quiet
     print_first_line()
 end outfile
 
+#Prepare interval file
 outfile "stocks_interval.csv" --quiet
     printf("Symbol,Start,Stop\n")
 end outfile
 
 set stopwatch 
 
-
-###################
-# Set 1 for tests #
-###################
+flush
 
 loop n_stock = 1 .. nelem(stocks)
     stock_sym = stocks[n_stock]
@@ -92,7 +91,6 @@ loop n_stock = 1 .. nelem(stocks)
                                 outMatrix = outMatrix | M
                             endif
                         endloop
-                        flush
                     endloop
                 endloop
             if qntR_bigger
@@ -113,6 +111,8 @@ loop n_stock = 1 .. nelem(stocks)
     delete L --force
     delete Lget --force
     delete temp_series --force
+
+    # Print for flush
     printf("Done %g of %g\n",n_stock,nelem(stocks))
 
     smpl full
