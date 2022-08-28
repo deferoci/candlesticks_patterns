@@ -1,4 +1,4 @@
-# Settings functions 
+# Functions for settings
 
 function bundle build_bundle_settings(void)
     bundle settings = null
@@ -88,7 +88,6 @@ function series and(const list L)
     return out
 end function
 
-
 function series lag(int t, const series s)
     return lags(t, s)[t]
 end function
@@ -171,20 +170,7 @@ function series trend(const bundle d, scalar interval)
     return trend_f
 end function 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# General functions 
 
 function matrix get_return(const bundle b, scalar obs_index, scalar days_p, bool bull[1])
     scalar days = days_p
