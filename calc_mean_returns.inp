@@ -31,8 +31,7 @@ set stopwatch
 flush
 
 matrix m_return_days = {5,10,15,20,40,60}
-matrix all_retuns = {}
-matrix tmp_matrix = {}
+matrix all_returns = {}
 
 loop n_stock = 1 .. nelem(stocks)
     stock_sym = stocks[n_stock]
@@ -41,15 +40,18 @@ loop n_stock = 1 .. nelem(stocks)
     if nelem(Lget) 
         list L = Lget[2] Lget[3] Lget[4] Lget[5]
         smpl L --no-missing
- 
+    
+        matrix tmp_matrix = {}
+
         list temp_returns = null
         loop i = 1 .. 6
             ret = m_return_days[i]
-            scalar mean_on_day = ({L[2]}[ret + 1 : $nobs] ./ {L[2]}[1 : $nobs - ret]) .+ 1 
-            tmp_matrix ~ {mean_on_day}
+            scalar mean_on_day = meanc(({L[2]}[ret + 1 : $nobs] ./ {L[2]}[1 : $nobs - ret]) .- 1) 
+            tmp_matrix ~= {mean_on_day}
         endloop
 
-        all_retuns = all_retuns | tmp_matrix
+        all_returns = all_returns | tmp_matrix
+
 
     endif
 
@@ -57,6 +59,7 @@ loop n_stock = 1 .. nelem(stocks)
     delete Lget --force
     delete temp_series --force
 
+    flush
     # Print for flush
     printf("Done %g of %g\n",n_stock,nelem(stocks))
 
@@ -65,5 +68,5 @@ endloop
 
 e = $stopwatch
 print e
-print all_retuns
-print meanc(all_retuns)
+print all_returns
+print meanc(all_returns)
