@@ -1,0 +1,69 @@
+set verbose off
+
+clear
+
+include yahoo_get
+open "https://raw.githubusercontent.com/deferoci/Nasdaq100/main/nasdaq_100.csv"
+
+strings stocks = array($nobs)
+
+# Build stocks array
+loop i=1..$nobs
+    stocks[i] = CODE[i]
+endloop
+
+clear --dataset
+
+# Calculate days from 1950-1-1 to 2022-7-31 and build dataset
+epochStart = epochday(1950,01,01)
+epochEnd = epochday(2022,07,31)
+days = dayspan(epochStart, epochEnd, 5)
+
+
+nulldata days --preserve
+setobs 5 "1950-01-01"
+series epoch = epochday($obsdate)
+
+stock_sym = stocks[1]
+
+set stopwatch 
+
+flush
+
+matrix m_return_days = {5,10,15,20,40,60}
+matrix all_retuns = {}
+matrix tmp_matrix = {}
+
+loop n_stock = 1 .. nelem(stocks)
+    stock_sym = stocks[n_stock]
+    list Lget = yahoo_full("@stock_sym")
+
+    if nelem(Lget) 
+        list L = Lget[2] Lget[3] Lget[4] Lget[5]
+        smpl L --no-missing
+ 
+        list temp_returns = null
+        loop i = 1 .. 6
+            ret = m_return_days[i]
+            scalar mean_on_day = ({L[2]}[ret + 1 : $nobs] ./ {L[2]}[1 : $nobs - ret]) .+ 1 
+            tmp_matrix ~ {mean_on_day}
+        endloop
+
+        all_retuns = all_retuns | tmp_matrix
+
+    endif
+
+    delete L --force
+    delete Lget --force
+    delete temp_series --force
+
+    # Print for flush
+    printf("Done %g of %g\n",n_stock,nelem(stocks))
+
+    smpl full
+endloop
+
+e = $stopwatch
+print e
+print all_retuns
+print meanc(all_retuns)
