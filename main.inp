@@ -4,7 +4,6 @@ clear
 
 include yahoo_get
 include "help_functions.inp"
-include "help_functions_patterns.inp"
 include "patterns.inp"
 
 open "https://raw.githubusercontent.com/deferoci/Nasdaq100/main/nasdaq_100.csv"
