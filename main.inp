@@ -6,13 +6,13 @@ include yahoo_get
 include "help_functions.inp"
 include "patterns.inp"
 
-open "https://raw.githubusercontent.com/deferoci/Nasdaq100/main/nasdaq_100.csv"
+open "dj.csv"
 
 strings stocks = array($nobs)
 
 # Build stocks array
 loop i=1..$nobs
-    stocks[i] = CODE[i]
+    stocks[i] = StockSymbol[i]
 endloop
 
 clear --dataset
@@ -21,7 +21,6 @@ clear --dataset
 epochStart = epochday(1950,01,01)
 epochEnd = epochday(2022,07,31)
 days = dayspan(epochStart, epochEnd, 5)
-
 
 nulldata days --preserve
 setobs 5 "1950-01-01"
@@ -33,18 +32,19 @@ function_names = getkeys(settings.patterns)
 stock_sym = stocks[1]
 
 # Perpare result file
-outfile "results_candlesticks.csv" --quiet
+path_results = $workdir ~ sprintf("%s_%s.csv","\results_stocks",strftime($now[1], "%m%d_%H%M"))
+path_stocks_inteval = $workdir ~ sprintf("%s_%s.csv","\stocks_interval",strftime($now[1], "%m%d_%H%M"))
+
+outfile "@path_results" --quiet
     print_first_line()
 end outfile
 
 #Prepare interval file
-outfile "stocks_interval.csv" --quiet
+outfile "@path_stocks_inteval" --quiet
     printf("Symbol,Start,Stop\n")
 end outfile
 
 set stopwatch 
-
-flush
 
 loop n_stock = 1 .. nelem(stocks)
     stock_sym = stocks[n_stock]
@@ -54,7 +54,7 @@ loop n_stock = 1 .. nelem(stocks)
         list L = Lget[2] Lget[3] Lget[4] Lget[5]
         smpl L --no-missing
 
-        outfile "stocks_interval.csv" --quiet --append
+        outfile "@path_stocks_inteval" --quiet --append
             printf("%s,%s,%s\n", stock_sym, isodate(epoch[1],1), isodate(epoch[$nobs],1))
         end outfile
         
@@ -90,6 +90,7 @@ loop n_stock = 1 .. nelem(stocks)
                                 outMatrix = outMatrix | M
                             endif
                         endloop
+                        flush
                     endloop
                 endloop
             if qntR_bigger
@@ -101,7 +102,7 @@ loop n_stock = 1 .. nelem(stocks)
         endif
         endloop
 
-        outfile "results_candlesticks.csv" --quiet --append
+        outfile "@path_results" --quiet --append
             print_matrix(outMatrix, stock_sym)
         end outfile
 
@@ -115,6 +116,7 @@ loop n_stock = 1 .. nelem(stocks)
     printf("Done %g of %g\n",n_stock,nelem(stocks))
 
     smpl full
+
 endloop
 
 e = $stopwatch
