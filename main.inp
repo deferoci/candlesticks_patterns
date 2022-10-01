@@ -32,8 +32,8 @@ function_names = getkeys(settings.patterns)
 stock_sym = stocks[1]
 
 # Perpare result file
-path_results = $workdir ~ sprintf("%s_%s.csv","\results_stocks",strftime($now[1], "%m%d_%H%M"))
-path_stocks_inteval = $workdir ~ sprintf("%s_%s.csv","\stocks_interval",strftime($now[1], "%m%d_%H%M"))
+path_results = $workdir ~ sprintf("%s_%s.csv","\results\results_stocks",strftime($now[1], "%m%d_%H%M"))
+path_stocks_inteval = $workdir ~ sprintf("%s_%s.csv","\results\stocks_interval",strftime($now[1], "%m%d_%H%M"))
 
 outfile "@path_results" --quiet
     print_first_line()
