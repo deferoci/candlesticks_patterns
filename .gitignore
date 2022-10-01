@@ -2,3 +2,4 @@ session.inp
 test.inp
 string_table.txt
 results/
+*.csv
