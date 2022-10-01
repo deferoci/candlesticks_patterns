@@ -1,3 +1,5 @@
+set verbose off
+
 clear
 
 function matrix compute_block(const series ret, scalar meanD)
@@ -9,9 +11,9 @@ function matrix compute_block(const series ret, scalar meanD)
     return M
 end function
 
-open "D:\DocumentiD\gretlD\results_candlesticks.csv"
+open "D:\DocumentiD\GitHub\candlesticks_patterns\results\results_stocks_0930_2021.csv"
 
-matrix medie_a_n_giorni = {0.0055713, 0.010946, 0.016379, 0.021925, 0.044396, 0.067395}
+matrix medie_a_n_giorni = {0.0031621,0.0060774,0.0088540,0.011541,0.022244,0.033308}
 
 matrix res = {}
 matrix row_res = {}
@@ -33,3 +35,5 @@ loop t_r = 1 .. 3
 endloop
 
 print res
+
+mwrite(res, "risultati.csv")
