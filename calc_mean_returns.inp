@@ -3,13 +3,13 @@ set verbose off
 clear
 
 include yahoo_get
-open "https://raw.githubusercontent.com/deferoci/Nasdaq100/main/nasdaq_100.csv"
+open "dj.csv"
 
 strings stocks = array($nobs)
 
 # Build stocks array
 loop i=1..$nobs
-    stocks[i] = CODE[i]
+    stocks[i] = StockSymbol[i]
 endloop
 
 clear --dataset
