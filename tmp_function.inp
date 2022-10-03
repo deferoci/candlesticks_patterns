@@ -1,0 +1,31 @@
+function bundle build_breturn(matrix v) 
+    bundle breturn = null
+    loop i = 1 .. nelem(v)
+        breturn[sprintf("%d", v[i])] = _(val = v[i], mean = null)
+    endloop
+    return breturn
+end function
+
+function bundle calc_mean_returns(bundle args)
+    include yahoo_get
+    bundle b_in = bread(args.input_path)
+
+    stocks = bread("dj.json")
+    bundle breturn = build_breturn({5, 10, 15, 20, 40, 60})
+    
+    loop m_return_days = 1 .. nelem(stocks.dj_list)
+        sym = stocks.dj_list[m_return_days].symbol
+        list Lget = yahoo_full("@sym")
+
+        if nelem(Lget)
+            smpl Lget[2] --no-missing
+            loop i = 1 .. nelem(breturn)
+                ret = breturn[i].val
+                matrix mean_on_day = vec(({L[2]}[ret + 1 : $nobs] ./ {L[2]}[1 : $nobs - ret]) .- 1) 
+                breturn[i].mean |= mean_on_day
+            endloop
+    endloop
+
+    
+
+end function 
