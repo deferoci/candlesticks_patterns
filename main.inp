@@ -1,3 +1,5 @@
+#TODO lasciare il main vuoto, tutto in funzioni
+
 set verbose off
 
 clear
@@ -40,7 +42,7 @@ set stopwatch
 dj = bread("dj.json")
 
 loop n_stock = 1 .. nelem(stocks)
-    stock_sym = dj.dj_list[n_stock].symbol
+    stock_sym = dj.list[n_stock].symbol
     list Lget = yahoo_full("@stock_sym")
 
     if nelem(Lget) 
