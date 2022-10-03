@@ -10,13 +10,6 @@ open "dj.csv"
 
 strings stocks = array($nobs)
 
-# Build stocks array
-loop i=1..$nobs
-    stocks[i] = StockSymbol[i]
-endloop
-
-clear --dataset
-
 # Calculate days from 1950-1-1 to 2022-7-31 and build dataset
 epochStart = epochday(1950,01,01)
 epochEnd = epochday(2022,07,31)
@@ -28,8 +21,6 @@ series epoch = epochday($obsdate)
 
 bundle settings = build_bundle_settings()
 function_names = getkeys(settings.patterns)
-
-stock_sym = stocks[1]
 
 # Perpare result file
 path_results = $workdir ~ sprintf("%s_%s.csv","\results\results_stocks",strftime($now[1], "%m%d_%H%M"))
@@ -46,8 +37,10 @@ end outfile
 
 set stopwatch 
 
+dj = bread("dj.json")
+
 loop n_stock = 1 .. nelem(stocks)
-    stock_sym = stocks[n_stock]
+    stock_sym = dj.dj_list[n_stock].symbol
     list Lget = yahoo_full("@stock_sym")
 
     if nelem(Lget) 
