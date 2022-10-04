@@ -4,3 +4,4 @@ string_table.txt
 results/
 *.csv
 *.json
+*.xlsx
