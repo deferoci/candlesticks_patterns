@@ -13,7 +13,7 @@ end function
 
 open "D:\DocumentiD\GitHub\candlesticks_patterns\results\results_stocks_0930_2021.csv"
 
-matrix medie_a_n_giorni = {0.0031621,0.0060774,0.0088540,0.011541,0.022244,0.033308}
+matrix medie_a_n_giorni = {0.002807286574509515,0.005501662121496699,0.008162833506983597,0.010829993394773472,0.02155539207859615,0.032374610340301056}
 
 matrix res = {}
 matrix row_res = {}
@@ -36,4 +36,4 @@ endloop
 
 print res
 
-mwrite(res, "risultati.csv")
+mwrite(res, "risultati_dj.csv")
