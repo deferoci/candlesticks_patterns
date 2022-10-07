@@ -10,6 +10,15 @@ function matrix compute_block(const series ret, scalar meanD)
     # FIXME mean è nello spazio dopo
     M[4] = pvalue(t, $nobs - meanD, abs(M[3]))
     return M
+# Function definitions 
+#---------------------
+function bundle compute_block(const series ret, scalar meanD)
+    bundle b_ret = null
+    b_ret.mean = mean(ret)
+    b_ret.SE = sd(ret)/sqrt($nobs)
+    b_ret.t = (b_ret.mean - meanD) / b_ret.SE
+    b_ret.pval = pvalue(t, $nobs, abs(b_ret.t))
+    return b_ret
 end function
 
 open "D:\DocumentiD\GitHub\candlesticks_patterns\results\results_stocks_0930_2021.csv"
