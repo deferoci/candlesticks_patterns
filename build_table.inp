@@ -1,15 +1,10 @@
+clear 
 set verbose off
 
-clear
+# Includes
+#---------
+include help_functions.inp
 
-function matrix compute_block(const series ret, scalar meanD)
-    matrix M = {0,0,0,0}
-    M[1] = mean(ret)
-    M[2] = sd(ret)/sqrt($nobs)
-    M[3] = M[1]/M[2]
-    # FIXME mean è nello spazio dopo
-    M[4] = pvalue(t, $nobs - meanD, abs(M[3]))
-    return M
 # Function definitions 
 #---------------------
 function bundle compute_block(const series ret, scalar meanD)
@@ -21,20 +16,31 @@ function bundle compute_block(const series ret, scalar meanD)
     return b_ret
 end function
 
+function string pval_stars(const scalar pval)
+if pval < 0.01
+    return "***"
+elif pval < 0.05 
+    return "**"
+elif pval < 0.1
+    return "*"
+else 
+    return " "
+endif
+end function
+
 open "D:\DocumentiD\GitHub\candlesticks_patterns\results\results_stocks_0930_2021.csv"
 
 matrix medie_a_n_giorni = {0.002807286574509515,0.005501662121496699,0.008162833506983597,0.010829993394773472,0.02155539207859615,0.032374610340301056}
 
-include help_functions.inp 
-
 settings = build_bundle_settings()
 
-path = "results_complete.csv"
+path = "results_complete_07_10.csv"
 
-outfile "@path" --append
+outfile "@path"
     printf("trend; pattern; quantile; daysRet; mean; SE; t; paval\n")
 end outfile
 
+outfile "@path" --append
 matrix res = {}
 matrix row_res = {}
 loop t_r = 1 .. 3
@@ -45,18 +51,16 @@ loop t_r = 1 .. 3
                 smpl Pattern == patt --restrict 
                 smpl Quantile_range == q_r --restrict 
                 smpl Days_return == days --restrict                 
-                row_res = row_res ~ compute_block(Return_on_day, medie_a_n_giorni[days]) 
-                outfile "@path" --append
-                    printf("%d;%s;%d;%d;%g;%g;%g;%g\n", 
-                           settings.trend_ranges[t_r],
-                           settings.patterns[patt],
-                           settings.quantile_ranges[q_r],
-                           settings.return_days[days],
-                           row_res[1],
-                           row_res[2],
-                           row_res[3],
-                           row_res[4])
-                end outfile
+                statistics = compute_block(Return_on_day, medie_a_n_giorni[days]) 
+                    printf("%d;",settings.trend_ranges[t_r])
+                    printf("%s;",settings.patterns[patt].name)
+                    printf("%d;",settings.quantile_ranges[q_r])
+                    printf("%d;",settings.return_days[days])
+                    printf("%g;",statistics.mean)
+                    printf("%g;",statistics.SE)
+                    printf("%g;",statistics.t)
+                    printf("%g;",statistics.pval)
+                    printf("%s\n",pval_stars(statistics.pval))
                 smpl full
             endloop
             res = res | row_res
@@ -64,9 +68,4 @@ loop t_r = 1 .. 3
         endloop
     endloop
 endloop
-
-print "ended"
-
-#print res
-
-#mwrite(res, "risultati_dj.csv")
+end outfile
