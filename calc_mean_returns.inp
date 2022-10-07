@@ -1,8 +1,29 @@
-set verbose off
+#TODO medie su totali
 
+
+set verbose off
 clear
 
-include yahoo_get
+include "tmp_function.inp"
+
+#Setup dataset
+
+# Calculate days from 1950-1-1 to 2022-7-31 and build dataset
+epochStart = epochday(1950,01,01)
+epochEnd = epochday(2022,07,31)
+days = dayspan(epochStart, epochEnd, 5)
+
+nulldata days 
+setobs 5 "1950-01-01"
+series epoch = epochday($obsdate)
+
+bundle args = null
+string args.input_path = "dj.json"
+string args.output_path = "mean_returns.json"
+
+
+calc_mean_returns(args)
+
 open "dj.csv"
 
 strings stocks = array($nobs)
@@ -25,10 +46,6 @@ setobs 5 "1950-01-01"
 series epoch = epochday($obsdate)
 
 stock_sym = stocks[1]
-
-set stopwatch 
-
-flush
 
 matrix m_return_days = {5,10,15,20,40,60}
 matrix all_returns = {}
