@@ -17,17 +17,22 @@ function bundle compute_block(const series ret, scalar meanD)
 end function
 
 function string pval_stars(const scalar pval)
-if pval < 0.01
-    return "***"
-elif pval < 0.05 
-    return "**"
-elif pval < 0.1
-    return "*"
-else 
-    return " "
-endif
+    if pval < 0.01
+        return "***"
+    elif pval < 0.05 
+        return "**"
+    elif pval < 0.1
+        return "*"
+    else 
+        return " "
+    endif
 end function
 
+function void from_data_to_xls(bundle settings)
+    
+end function
+# Script body
+#------------
 open "D:\DocumentiD\GitHub\candlesticks_patterns\results\results_stocks_0930_2021.csv"
 
 matrix medie_a_n_giorni = {0.002807286574509515,0.005501662121496699,0.008162833506983597,0.010829993394773472,0.02155539207859615,0.032374610340301056}
