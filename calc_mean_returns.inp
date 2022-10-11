@@ -45,14 +45,12 @@ nulldata days --preserve
 setobs 5 "1950-01-01"
 series epoch = epochday($obsdate)
 
-stock_sym = stocks[1]
-
 matrix m_return_days = {5,10,15,20,40,60}
 matrix all_returns = {}
 
 loop n_stock = 1 .. nelem(stocks)
-    stock_sym = stocks[n_stock]
-    list Lget = yahoo_full("@stock_sym")
+    stock_symbol = stocks[n_stock]
+    list Lget = yahoo_full("@stock_symbol")
 
     if nelem(Lget) 
         list L = Lget[2] Lget[3] Lget[4] Lget[5]
