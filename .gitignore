@@ -6,3 +6,4 @@ results/
 *.json
 *.xlsx
 session.inp
+test.inp
