@@ -1,1 +1,6 @@
-print $workdir
+function void f(void)
+    include "patterns.inp"
+    print "Ho incluso il file"
+end function
+
+f()

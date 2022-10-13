@@ -1,2 +1,5 @@
 run "D:\DocumentiD\GitHub\candlesticks_patterns\test.inp"
 run D:\DocumentiD\GitHub\candlesticks_patterns\test.inp
+include "patterns.inp"
+print "Ho incluso il file"
+end function
