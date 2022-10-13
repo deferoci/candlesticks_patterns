@@ -5,3 +5,4 @@ results/
 *.csv
 *.json
 *.xlsx
+session.inp
