@@ -1,12 +1,7 @@
-#TODO medie su totali
-
-
-set verbose off
 clear
+set verbose off
 
-include "tmp_function.inp"
-
-#Setup dataset
+# Setup dataset
 
 # Calculate days from 1950-1-1 to 2022-7-31 and build dataset
 epochStart = epochday(1950,01,01)
