@@ -1,8 +1,10 @@
-# TODO lasciare il main vuoto, tutto in funzioni
+#TODO lasciare il main vuoto, tutto in funzioni
 
-set verbose off
+#FIXME do this
 
 clear
+set verbose off
+
 
 include yahoo_get
 include "help_functions.inp"
