@@ -89,9 +89,11 @@ loop stock_number = 1 .. nelem(stocks)
                         loop current_obs = 1 .. $nobs
                             if ok(temp_pattern_series[current_obs]) && temp_pattern_series[current_obs] == 1
                                 trend_is_bullish = settings.patterns.$pattern_function.trend
-                                matrix M = get_return(stock_data,current_obs,settings.days_position_is_open_list[days_position_is_open],trend_is_bullish)
-                                M = {epoch[current_obs], settings.patterns["$pattern_function"].id, trend_range_num, quantile_range_num, days_position_is_open} ~ M
-                                outMatrix = outMatrix | M
+                                # Calculate returns
+                                matrix tmp_M = get_returns(stock_data,current_obs,settings.days_position_is_open_list[days_position_is_open],trend_is_bullish)
+                                # Append on the top of tmp_M matrix
+                                tmp_M = {epoch[current_obs], settings.patterns["$pattern_function"].id, trend_range_num, quantile_range_num, days_position_is_open} ~ tmp_M
+                                outMatrix = outMatrix | tmp_M
                             endif
                         endloop
                     endloop
