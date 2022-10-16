@@ -1,6 +1,3 @@
-function void f(void)
-    include "patterns.inp"
-    print "Ho incluso il file"
-end function
-
-f()
+outfile "test_file_write.txt"
+    print("Hello I'm inside")
+end outfile

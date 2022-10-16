@@ -1,6 +1,345 @@
-run "D:\DocumentiD\GitHub\candlesticks_patterns\test.inp"
-run D:\DocumentiD\GitHub\candlesticks_patterns\test.inp
-include "patterns.inp"
-print "Ho incluso il file"
-print "This"
+run "D:\DocumentiD\GitHub\candlesticks_patterns\main.inp"
+run D:\DocumentiD\GitHub\candlesticks_patterns\main.inp
+include "C:\Users\Federico\AppData\Roaming\gretl\functions\yahoo_get.gfn"
+include "D:\DocumentiD\GitHub\candlesticks_patterns\help_functions.inp"
+bundle settings = null
+
+
+
+
+bundle hammer = _(id=1, trend=1, name = "hammer")
+bundle piercing_lines = _(id=2, trend=1, name = "piercing_lines")
+bundle rising_three = _(id=3, trend=1, name = "rising_three")
+bundle morning_star = _(id=4, trend=1, name = "morning_star")
+bundle dark_cloud_cover = _(id=5, trend=0, name = "dark_cloud_cover")
+bundle falling_three = _(id=6, trend=0, name = "falling_three")
+bundle evening_star = _(id=7, trend=0, name = "evening_star")
+bundles b_patterns = defarray(hammer, piercing_lines, rising_three, morning_star, dark_cloud_cover, falling_three, evening_star)
+
+
+matrix m_trend_ranges = {15, 20, 50}
+matrix m_quantile_ranges = {30, 60, 130, 260}
+matrix m_return_days = {5,10,15,20,40,60}
+
+
+settings.patterns = b_patterns
+settings.trend_ranges = m_trend_ranges
+settings.quantile_ranges = m_quantile_ranges
+settings.return_days = m_return_days
+
+
+return settings
+end function
+
+if sum(!ok(L)) > 0
+print "WARNING: NA in list"
+return
+endif
+
+
+if !exists(self)
+self = null
+endif
+
+
+bundle default = null
+
+
+self = self + default
+
+
+series self.open = L[1]
+series self.close = L[2]
+series self.high = L[3]
+series self.low = L[4]
+series self.time = time
+
+
+series self.body_len = set_body_len(self)
+
+
+self.top_shadow_len = top_shadow_len(self) / (self.body_len + 1)
+self.bottom_shadow_len = bottom_shadow_len(self) / (self.body_len + 1)
+
+
+series self.body_len_qI = set_quantile(self.body_len, self.quantile_range, 0.25)
+series self.body_len_qIII = set_quantile(self.body_len, self.quantile_range, 0.75)
+series self.top_shadow_len_qI = set_quantile(self.top_shadow_len, self.quantile_range, 0.25)
+series self.top_shadow_len_qIII = set_quantile(self.top_shadow_len, self.quantile_range, 0.75)
+series self.bottom_shadow_len_qI = set_quantile(self.bottom_shadow_len, self.quantile_range, 0.25)
+series self.bottom_shadow_len_qIII = set_quantile(self.bottom_shadow_len, self.quantile_range, 0.75)
+
+
+series self.trend = trend(self, self.trend_range)
+end function
+if step >= $nobs
+return quantile(s, quantile)
+endif
+set skip_missing off
+L = lags(step, s)
+L = s || L
+M = {L}
+M = M'
+series ret_s = vec(quantile(M, quantile))
+scalar first = ret_s[step +1]
+ret_s = ok(ret_s) ? ret_s : first
+
+
+return ret_s
+end function
+series out = 1
+loop i=1..nelem(L)
+out = out && L[i]
+endloop
+return out
+end function
+return lags(t, s)[t]
+end function
+return (d.open + d.close) / 2
+end function
+return abs(d.open - d.close)
+end function
+return d.body_len
+end function
+series higher = d.open > d.close
+series bt = (higher * d.open) + (!higher * d.close)
+return bt
+end function
+series lower_b = d.open < d.close
+series bt = (lower_b * d.open) + (!lower_b * d.close)
+return bt
+end function
+return (d.high - body_top(d))
+end function
+return (body_bottom(d) - d.low)
+end function
+return d.open < d.close
+end function
+return d.body_len > d.body_len_qIII
+end function
+return d.body_len < d.body_len_qI
+end function
+return d.bottom_shadow_len > d.bottom_shadow_len_qIII
+end function
+return d.bottom_shadow_len < d.bottom_shadow_len_qI
+end function
+return d.top_shadow_len > d.top_shadow_len_qIII
+end function
+return d.top_shadow_len < d.top_shadow_len_qI
+end function
+return d.open == d.close
+end function
+series s_lagged = lag(1, s)
+series trend = sgn(s - s_lagged)
+return trend
+end function
+series x = time
+series y = d.close
+series loess_approx = loess(y, x, 2, interval/$nobs)
+trend_f = find_trend(loess_approx)
+return trend_f
+end function
+scalar days = days_p
+scalar base_index = b.close[obs_index]
+matrix Mh = {b.high}
+matrix Ml = {b.low}
+matrix Mc = {b.close}
+matrix returns = {0,0,0,0}
+
+
+if ((obs_index + days) > $nobs)
+days = $nobs - obs_index
+endif
+
+
+returns[1] = Mc[obs_index + days]
+
+
+if bull
+returns[2] = max(Mh[obs_index:obs_index+days])
+returns[3] = min(Ml[obs_index:obs_index+days])
+index_of_max = imaxc(Mh[obs_index:obs_index+days])
+returns[4] = min(Ml[obs_index:obs_index + index_of_max - 1])
+returns -= base_index
+returns /= base_index
+else
+returns[1] = Mc[obs_index + days]
+returns[2] = min(Ml[obs_index:obs_index+days])
+returns[3] = max(Mh[obs_index:obs_index+days])
+index_of_min = iminc(Ml[obs_index:obs_index+days])
+returns[4] = max(Mh[obs_index:obs_index + index_of_min - 1])
+returns *= -1
+returns += base_index
+returns /= base_index
+endif
+
+
+return returns
+end function
+printf("Stock,Date,Pattern,Trend_range,Quantile_range,Days_return,Return_on_day,Max_return,Max_loss,Max_loss_before\n")
+end function
+loop i = 1 .. (rows(M))
+printf("%s,", sym)
+loop t = 1 .. (cols(M) - 1)
+printf("%g,",M[i,t])
+endloop
+t++
+printf("%g\n",M[i,t])
+endloop
+end function
+setinfo s --description="@description"
+end function
+include "D:\DocumentiD\GitHub\candlesticks_patterns\patterns.inp"
+series isBlack = !is_white(d)
+series shortBody = is_body_short(d)
+series longBottomShadow = is_bottom_shadow_long(d)
+series shortUpShadow = top_shadow_len(d) <= (l * body_len(d))
+series trend = lag(1, d.trend) < 0
+series notDoji = !is_doji(d)
+list l_and = isBlack shortBody longBottomShadow shortUpShadow trend notDoji
+series out = and(l_and)
+
+
+set_description(&out, sprintf("Hammer - l = %g",l))
+
+
+return out
+end function
+series precWhite = lag(1, is_white(d))
+series currentBlack = !is_white(d)
+series precLong = lag(1, is_body_long(d))
+series openAbovePrec = d.open > lag(1,body_top(d))
+series closeBelowMeanPrec = d.close < lag(1, mean_price(d))
+series trend = lag(2, d.trend) > 0
+series notDoji = !is_doji(d)
+list l_and = precWhite currentBlack precLong openAbovePrec closeBelowMeanPrec trend notDoji
+series out = and(l_and)
+
+
+set_description(&out, "Dark Cloud Cover")
+
+
+return out
+end function
+series precBlack = lag(1, !is_white(d))
+series currentWhite = is_white(d)
+series precLong = lag(1, is_body_long(d))
+series openBelowPrec = d.open < lag(1,body_bottom(d))
+series closeAboveMeanPrec = d.close > lag(1, mean_price(d))
+series trend = lag(2, d.trend) < 0
+series notDoji = !is_doji(d)
+list l_and = precBlack currentWhite precLong openBelowPrec closeAboveMeanPrec trend notDoji
+series out = and(l_and)
+
+
+set_description(&out, "Piercing Lines")
+
+
+return out
+
+
+end function
+series firstWhite = lag(2, is_white(d))
+series firstLong = lag(2, is_body_long(d))
+series secondBlack = !lag(1, is_white(d))
+series seconShort = lag(1, is_body_short(d))
+series lastBlack = !is_white(d)
+series lastLong = is_body_long(d)
+series gapFirstSecond = lag(2, body_top(d)) <= lag(1, body_bottom(d))
+series gapSecondLast = lag(1, body_bottom(d)) >= body_top(d)
+series trend = lag(3, d.trend) > 0
+series notDoji = !is_doji(d)
+list l_and = firstWhite firstLong secondBlack seconShort lastBlack lastLong gapFirstSecond gapSecondLast time notDoji
+out = and(l_and)
+
+
+set_description(&out, "Evening Star")
+
+
+return out
+end function
+series firstBlack = !lag(2, is_white(d))
+series firstLong = lag(2, is_body_long(d))
+series secondBlack = !lag(1, is_white(d))
+series seconShort = lag(1, is_body_short(d))
+series lastWhite = is_white(d)
+series lastLong = is_body_long(d)
+series gapFirstSecond = lag(2, body_bottom(d)) >= lag(1, body_top(d))
+series gapSecondLast = lag(1, body_top(d)) <= body_bottom(d)
+series trend = lag(3, d.trend) < 0
+series notDoji = !is_doji(d)
+list l_and = firstBlack firstLong secondBlack seconShort lastWhite lastLong gapFirstSecond gapSecondLast time notDoji
+out = and(l_and)
+
+
+set_description(&out, "Morning Star")
+
+
+return out
+end function
+
+
+series firstWhite = lag(days+1, is_white(d))
+series firstLong = lag(days+1, is_body_long(d))
+series lastWhite = is_white(d)
+series lastLong = is_body_long(d)
+series notDoji = !is_doji(d)
+list tempL = firstWhite firstLong lastWhite lastLong notDoji
+list blackCandles = null
+loop t=1..days
+series isBodyShort_$t = lag(t, is_body_short(d))
+series isBlack_$t = lag(t, !is_white(d))
+tempL += isBodyShort_$t
+blackCandles += isBlack_$t
+if inBody
+series maxBelow_$t = lag((days + 1), body_top(d)) > lag(t, body_top(d))
+series minOver_$t = lag((days + 1), body_bottom(d)) < lag(t, body_bottom(d))
+tempL += maxBelow_$t minOver_$t
+endif
+endloop
+
+
+series nBlack = ( sum(blackCandles) >= (days - w) )
+series trend = lag(days + 2, d.trend) > 0
+tempL += nBlack trend
+series out = and(tempL)
+
+
+set_description(&out, sprintf("Rising Three, days: %d, w: %d, inBody: %d", days, w, inBody))
+
+
+return out
+end function
+
+
+series firstBlack = lag(days+1, !is_white(d))
+series firstLong = lag(days+1, is_body_long(d))
+series lastBlack = !is_white(d)
+series lastLong = is_body_long(d)
+series notDoji = !is_doji(d)
+list tempL = firstBlack firstLong lastBlack lastLong notDoji
+list whiteCandles = null
+loop t=1..days
+series isBodyShort_$t = lag(t, is_body_short(d))
+series isWhite_$t = lag(t, is_white(d))
+tempL += isBodyShort_$t
+whiteCandles += isWhite_$t
+if inBody
+series maxBelow_$t = lag((days + 1), body_top(d)) > lag(t, body_top(d))
+series minOver_$t = lag((days + 1), body_bottom(d)) < lag(t, body_bottom(d))
+tempL += maxBelow_$t minOver_$t
+endif
+endloop
+
+
+series nWhite = ( sum(whiteCandles) >= (days - b) )
+series trend = lag(days + 2, d.trend) < 0
+tempL += nWhite trend
+series out = and(tempL)
+
+
+set_description(&out, sprintf("Falling Three, days: %d, b: %d, inBody: %d", days, b, inBody))
+
+
+return out
 end function

@@ -1,6 +1,6 @@
 # Functions for settings
 
-function bundle build_bundle_settings(void)
+function bundle build_settings_bundle(void)
     bundle settings = null
 
     #Build budle patterns
@@ -12,16 +12,16 @@ function bundle build_bundle_settings(void)
     bundle dark_cloud_cover = _(id=5, trend=0, name = "dark_cloud_cover")
     bundle falling_three = _(id=6, trend=0, name = "falling_three")
     bundle evening_star = _(id=7, trend=0, name = "evening_star")
-    bundles b_patterns = defarray(hammer, piercing_lines, rising_three, morning_star, dark_cloud_cover, falling_three, evening_star)
+    bundles patterns_array = defarray(hammer, piercing_lines, rising_three, morning_star, dark_cloud_cover, falling_three, evening_star)
 
-    matrix m_trend_ranges = {15, 20, 50} #Fixed by moving averages
-    matrix m_quantile_ranges = {30, 60, 130, 260} #6w, 3m, 6m, 1y 
-    matrix m_return_days = {5,10,15,20,40,60} # 1,2,3,4,8,12 weeks
+    matrix trend_ranges_matrix = {15, 20, 50} #Fixed by moving averages
+    matrix quantile_ranges_matrix = {30, 60, 130, 260} #6w, 3m, 6m, 1y 
+    matrix days_position_is_open_list = {5,10,15,20,40,60} # 1,2,3,4,8,12 weeks
 
-    settings.patterns = b_patterns
-    settings.trend_ranges = m_trend_ranges 
-    settings.quantile_ranges = m_quantile_ranges
-    settings.return_days = m_return_days
+    bundles settings.patterns = patterns_array
+    matrix settings.trend_ranges = trend_ranges_matrix 
+    matrix settings.quantile_ranges = quantile_ranges_matrix
+    matrix settings.days_position_is_open_list = days_position_is_open_list
 
     return settings
 end function
@@ -29,7 +29,7 @@ end function
 function void init(bundle *self, const list L)
     
     if sum(!ok(L)) > 0
-        print "WARNING: NA in list"
+        print "WARNING: NA in list in function init()"
         return 
     endif
 

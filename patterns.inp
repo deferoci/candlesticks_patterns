@@ -1,4 +1,5 @@
 # Patterns functions
+# ==================
 
 function series hammer(const bundle d, scalar l[0:1:0]) 
     series isBlack = !is_white(d)
