@@ -172,7 +172,7 @@ end function
 
 # General functions 
 
-function matrix get_return(const bundle b, scalar obs_index, scalar days_p, bool bull[1])
+function matrix get_returns(const bundle b, scalar obs_index, scalar days_p, bool bull[1])
     scalar days = days_p
     scalar base_index = b.close[obs_index]
     matrix Mh = {b.high}
