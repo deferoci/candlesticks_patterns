@@ -1,4 +1,0 @@
-outfile "test_file_write.txt"
-    print("Hello I'm inside")
-end outfile
-ffeef
