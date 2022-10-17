@@ -42,12 +42,6 @@ self = null
 endif
 
 
-bundle default = null
-
-
-self = self + default
-
-
 series self.open = L[1]
 series self.close = L[2]
 series self.high = L[3]
@@ -58,8 +52,8 @@ series self.time = time
 series self.body_len = set_body_len(self)
 
 
-self.top_shadow_len = top_shadow_len(self) / (self.body_len + 1)
-self.bottom_shadow_len = bottom_shadow_len(self) / (self.body_len + 1)
+series self.top_shadow_len = top_shadow_len(self) / (self.body_len + 1)
+series self.bottom_shadow_len = bottom_shadow_len(self) / (self.body_len + 1)
 
 
 series self.body_len_qI = set_quantile(self.body_len, self.quantile_range, 0.25)
@@ -294,4 +288,52 @@ blackCandles += isBlack_$t
 if inBody
 series maxBelow_$t = lag((days + 1), body_top(d)) > lag(t, body_top(d))
 series minOver_$t = lag((days + 1), body_bottom(d)) < lag(t, body_bottom(d))
-tempL += maxBelow_$t 
+tempL += maxBelow_$t minOver_$t
+endif
+endloop
+
+
+series nBlack = ( sum(blackCandles) >= (days - w) )
+series trend = lag(days + 2, d.trend) > 0
+tempL += nBlack trend
+series out = and(tempL)
+
+
+set_description(&out, sprintf("Rising Three, days: %d, w: %d, inBody: %d", days, w, inBody))
+
+
+return out
+end function
+
+
+series firstBlack = lag(days+1, !is_white(d))
+series firstLong = lag(days+1, is_body_long(d))
+series lastBlack = !is_white(d)
+series lastLong = is_body_long(d)
+series notDoji = !is_doji(d)
+list tempL = firstBlack firstLong lastBlack lastLong notDoji
+list whiteCandles = null
+loop t=1..days
+series isBodyShort_$t = lag(t, is_body_short(d))
+series isWhite_$t = lag(t, is_white(d))
+tempL += isBodyShort_$t
+whiteCandles += isWhite_$t
+if inBody
+series maxBelow_$t = lag((days + 1), body_top(d)) > lag(t, body_top(d))
+series minOver_$t = lag((days + 1), body_bottom(d)) < lag(t, body_bottom(d))
+tempL += maxBelow_$t minOver_$t
+endif
+endloop
+
+
+series nWhite = ( sum(whiteCandles) >= (days - b) )
+series trend = lag(days + 2, d.trend) < 0
+tempL += nWhite trend
+series out = and(tempL)
+
+
+set_description(&out, sprintf("Falling Three, days: %d, b: %d, inBody: %d", days, b, inBody))
+
+
+return out
+end function

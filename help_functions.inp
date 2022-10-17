@@ -37,10 +37,6 @@ function void init(bundle *self, const list L)
         self = null
     endif
 
-    bundle default = null
-
-    self = self + default
-
     series self.open = L[1]
     series self.close = L[2]
     series self.high = L[3]
@@ -49,8 +45,8 @@ function void init(bundle *self, const list L)
 
     series self.body_len = set_body_len(self)
 
-    self.top_shadow_len = top_shadow_len(self) / (self.body_len + 1)
-    self.bottom_shadow_len = bottom_shadow_len(self) / (self.body_len + 1)
+    series self.top_shadow_len = top_shadow_len(self) / (self.body_len + 1)
+    series self.bottom_shadow_len = bottom_shadow_len(self) / (self.body_len + 1)
 
     series self.body_len_qI = set_quantile(self.body_len, self.quantile_range, 0.25)
     series self.body_len_qIII = set_quantile(self.body_len, self.quantile_range, 0.75)

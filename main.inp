@@ -8,7 +8,7 @@ include "patterns.inp"
 # Define variables 
 # ================
 # path_to_bundle_stocks: bundle -> list -> name
-string path_to_bundle_stocks = "D:\DocumentiD\GitHub\candlesticks_patterns\not_scripts\dj_stocks_list.json"
+string path_to_bundle_stocks = ".\dj_stocks_list.json"
 
 # Calculate days from 1950-1-1 to 2022-7-31 and build dataset
 epochStart = epochday(1950,01,01)
@@ -20,8 +20,8 @@ series epoch = epochday($obsdate)
 bundle settings = build_settings_bundle()
 
 # Perpare result file
-path_to_results = "D:\DocumentiD\gretlD\row_results_tesi\patterns.csv"
-path_to_inteval = "D:\DocumentiD\gretlD\row_results_tesi\intervals.csv"
+path_to_results = ".\row_results\patterns.csv"
+path_to_inteval = ".\row_results\intervals.csv"
 
 
 outfile "@path_to_results" --quiet
@@ -34,8 +34,9 @@ outfile "@path_to_inteval" --quiet
 end outfile
 
 bundle dj = bread(path_to_bundle_stocks)
+bundle stock_infos = null
 
-loop stock_number = 1 .. nelem(stocks)
+loop stock_number = 1 .. nelem(dj.list)
     string stock_sym = dj.list[stock_number].symbol
     list tmp_stock_prices_list = yahoo_full("@stock_sym")
 
@@ -52,51 +53,51 @@ loop stock_number = 1 .. nelem(stocks)
         
         outMatrix = {}
 
-        trend_range_is_bigger_than_obs = 0
-        quantile_range_is_bigger_than_obs = 0
+        trend_range_bigger_obs = 0
+        quantile_range_bigger_obs = 0
 
         loop trend_range_index = 1 .. nelem(settings.trend_ranges)
             # Check trend range selected is lower than observations
             if settings.trend_ranges[trend_range_index] > $nobs
-                stock_data.trend_range_num = $nobs
-                trend_range_is_bigger_than_obs = 1
+                stock_infos.trend_range = $nobs
+                trend_range_bigger_obs = 1
             else
-                stock_data.trend_range_num = settings.trend_range_index[trend_range_num]
+                stock_infos.trend_range = settings.trend_ranges[trend_range_index]
             endif
 
 
             loop quantile_range_index = 1 .. nelem(settings.quantile_ranges) 
                 # Check quantile range selected is lower than observations
                 if settings.quantile_ranges[quantile_range_index] > $nobs
-                    stock_data.quantile_range = $nobs 
-                    quantile_range_is_bigger_than_obs = 1
+                    stock_infos.quantile_range = $nobs 
+                    quantile_range_bigger_obs = 1
                 else 
-                    stock_data.quantile_range = settings.quantile_ranges[quantile_range_num]
+                    stock_infos.quantile_range = settings.quantile_ranges[quantile_range_index]
                 endif
 
-                # Initialize bundle 
-                bundle stock_data = null
-                init(&stock_data, stock_prices_list)
+                # Initialize bundle
+                init(&stock_infos, stock_prices_list)
                 
                 loop days_position_is_open = 1 .. nelem(settings.days_position_is_open_list)
-                    loop foreach pattern_function settings.patterns
-                        series temp_pattern_series = feval("$pattern_function", stock_data) 
+                    loop pattern_function_index = 1 .. nelem(settings.patterns)
+                        bundle curr_function_bundle = settings.patterns[pattern_function_index]
+                        series temp_pattern_series = feval(curr_function_bundle.name, stock_infos) 
                         loop current_obs = 1 .. $nobs
                             if ok(temp_pattern_series[current_obs]) && temp_pattern_series[current_obs] == 1
-                                trend_is_bullish = settings.patterns.$pattern_function.trend
+                                trend_is_bullish = curr_function_bundle.trend
                                 # Calculate returns
-                                matrix current_pattern_returns = get_returns(stock_data,current_obs,settings.days_position_is_open_list[days_position_is_open],trend_is_bullish)
-                                matrix current_pattern_infos = {epoch[current_obs], settings.patterns["$pattern_function"].id, trend_range_num, quantile_range_num, days_position_is_open}
+                                matrix current_pattern_returns = get_returns(stock_infos,current_obs,settings.days_position_is_open_list[days_position_is_open],trend_is_bullish)
+                                matrix current_pattern_infos = {epoch[current_obs], curr_function_bundle.id, trend_range_index, quantile_range_index, days_position_is_open}
                                 outMatrix = outMatrix | (current_pattern_infos ~ current_pattern_returns)
                             endif
                         endloop
                     endloop
                 endloop
-            if quantile_range_is_bigger_than_obs
+            if quantile_range_bigger_obs
                 break
             endif
             endloop
-        if trend_range_is_bigger_than_obs
+        if trend_range_bigger_obs
             break
         endif
         endloop
@@ -113,6 +114,8 @@ loop stock_number = 1 .. nelem(stocks)
 
     smpl full
 
+    print "End main loop"
+    flush
 endloop
 
 e = $stopwatch
