@@ -9,10 +9,6 @@ include "patterns.inp"
 # ================
 # path_to_bundle_stocks: bundle -> list -> name
 string path_to_bundle_stocks = "D:\DocumentiD\GitHub\candlesticks_patterns\not_scripts\dj_stocks_list.json"
-string results_dir = "D:\DocumentiD\gretlD\row_results_tesi"
-string results_file_name = sprintf("patterns_%s.csv", strsplit(path_to_bundle_stocks,".")[1])
-string intevals_file_name = sprintf("interval_%s.csv", strsplit(path_to_bundle_stocks,".")[1])
-
 
 # Calculate days from 1950-1-1 to 2022-7-31 and build dataset
 epochStart = epochday(1950,01,01)
@@ -22,11 +18,10 @@ nulldata days --preserve
 setobs 5 "1950-01-01"
 series epoch = epochday($obsdate)
 bundle settings = build_settings_bundle()
-functions_names = getkeys(settings.patterns)
 
 # Perpare result file
-path_to_results = results_dir ~ "\\" ~ results_file_name
-path_to_inteval = results_dir ~ "\\" ~ intevals_file_name
+path_to_results = "D:\DocumentiD\gretlD\row_results_tesi\patterns.csv"
+path_to_inteval = "D:\DocumentiD\gretlD\row_results_tesi\intervals.csv"
 
 
 outfile "@path_to_results" --quiet
@@ -84,16 +79,15 @@ loop stock_number = 1 .. nelem(stocks)
                 init(&stock_data, stock_prices_list)
                 
                 loop days_position_is_open = 1 .. nelem(settings.days_position_is_open_list)
-                    loop foreach pattern_function functions_names
+                    loop foreach pattern_function settings.patterns
                         series temp_pattern_series = feval("$pattern_function", stock_data) 
                         loop current_obs = 1 .. $nobs
                             if ok(temp_pattern_series[current_obs]) && temp_pattern_series[current_obs] == 1
                                 trend_is_bullish = settings.patterns.$pattern_function.trend
                                 # Calculate returns
-                                matrix tmp_M = get_returns(stock_data,current_obs,settings.days_position_is_open_list[days_position_is_open],trend_is_bullish)
-                                # Append on the top of tmp_M matrix
-                                tmp_M = {epoch[current_obs], settings.patterns["$pattern_function"].id, trend_range_num, quantile_range_num, days_position_is_open} ~ tmp_M
-                                outMatrix = outMatrix | tmp_M
+                                matrix current_pattern_returns = get_returns(stock_data,current_obs,settings.days_position_is_open_list[days_position_is_open],trend_is_bullish)
+                                matrix current_pattern_infos = {epoch[current_obs], settings.patterns["$pattern_function"].id, trend_range_num, quantile_range_num, days_position_is_open}
+                                outMatrix = outMatrix | (current_pattern_infos ~ current_pattern_returns)
                             endif
                         endloop
                     endloop
