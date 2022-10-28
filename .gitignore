@@ -1,8 +1,7 @@
 session.inp
 test.inp
 string_table.txt
-results/
+row_results/
 *.csv
 *.json
 *.xlsx
-session.inp
