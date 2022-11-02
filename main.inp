@@ -1,14 +1,18 @@
 clear
 set verbose off
+set stopwatch
 
 include yahoo_get
 include "help_functions.inp"
 include "patterns.inp"
 
+#set $workdir "path to dir"
+
 # Define variables 
 # ================
-# path_to_bundle_stocks: bundle -> list -> name
-string path_to_bundle_stocks = ".\dj_stocks_list.json"
+# dj.json format:
+# {"list":[{"name": string,"exchange": string,"symbol": string}, ... ]}
+string path_to_bundle_stocks = $workdir ~ "\input_data\dj.json"
 
 # Calculate days from 1950-1-1 to 2022-7-31 and build dataset
 epochStart = epochday(1950,01,01)
@@ -17,24 +21,25 @@ days = dayspan(epochStart, epochEnd, 5)
 nulldata days --preserve
 setobs 5 "1950-01-01"
 series epoch = epochday($obsdate)
-bundle settings = build_settings_bundle()
 
-# Perpare result file
-path_to_results = ".\row_results\patterns.csv"
-path_to_inteval = ".\row_results\intervals.csv"
+# To use custom settings or to make new json file
+# use function build_settings_bundle()
+bundle settings = bread(".\input_data\settings.json")
 
+# Define patterns for output files
+path_to_results = $workdir ~ "\output_data\patterns.csv"
+path_to_inteval = $workdir ~ "\output_data\intervals.json"
 
 outfile "@path_to_results" --quiet
     print_first_line()
 end outfile
 
-#Prepare interval file
-outfile "@path_to_inteval" --quiet
-    printf("Symbol,Start,Stop\n")
-end outfile
-
+# Define bundles 
 bundle dj = bread(path_to_bundle_stocks)
 bundle stock_infos = null
+bundle intervals_bundle = null
+bundles intervals_bundle.list = array(nelem(dj.list))
+matrix intervals_bundle.days_position_is_open_list = settings.days_position_is_open_list
 
 loop stock_number = 1 .. nelem(dj.list)
     string stock_sym = dj.list[stock_number].symbol
@@ -46,10 +51,6 @@ loop stock_number = 1 .. nelem(dj.list)
         stock_prices_list += tmp_stock_prices_list[4] 
         stock_prices_list += tmp_stock_prices_list[5]
         smpl stock_prices_list --no-missing
-
-        outfile "@path_to_inteval" --quiet --append
-            printf("%s,%s,%s\n", stock_sym, isodate(epoch[1],1), isodate(epoch[$nobs],1))
-        end outfile
         
         outMatrix = {}
 
@@ -77,6 +78,15 @@ loop stock_number = 1 .. nelem(dj.list)
 
                 # Initialize bundle
                 init(&stock_infos, stock_prices_list)
+
+                string intervals_bundle.list[stock_number].symbol = stock_sym
+                string intervals_bundle.list[stock_number].start = isodate(epoch[1],1)
+                string intervals_bundle.list[stock_number].stop = isodate(epoch[$nobs],1)
+                matrix intervals_bundle.list[stock_number].means = {}
+                loop open_days_index = 1 .. nelem(settings.days_position_is_open_list)
+                    scalar curr_open_days = settings.days_position_is_open_list[open_days_index]
+                    intervals_bundle.list[stock_number].means ~= mean_percent_return(stock_infos.close, curr_open_days)
+                endloop 
                 
                 loop days_position_is_open = 1 .. nelem(settings.days_position_is_open_list)
                     loop pattern_function_index = 1 .. nelem(settings.patterns)
@@ -113,10 +123,10 @@ loop stock_number = 1 .. nelem(dj.list)
     delete temp_pattern_series --force
 
     smpl full
-
-    print "End main loop"
     flush
 endloop
+
+bwrite(intervals_bundle, path_to_inteval)
 
 e = $stopwatch
 print e

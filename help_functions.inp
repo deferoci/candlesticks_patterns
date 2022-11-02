@@ -1,6 +1,7 @@
 # Functions for settings
 
 function bundle build_settings_bundle(void)
+    # Not used - Build custom patterns
     bundle settings = null
 
     #Build budle patterns
@@ -204,7 +205,7 @@ function matrix get_returns(const bundle b, scalar obs_index, scalar days_p, boo
 end function
 
 function void print_first_line(void)
-    printf("Stock,Date,Pattern,Trend_range,Quantile_range,Days_return,Return_on_day,Max_return,Max_loss,Max_loss_before\n")
+    printf("stock,date,pattern,trend_range,quantile_range,days_open,profit,max_profit,max_loss,max_loss_before\n")
 end function
 
 function void print_matrix(const matrix M, string sym)
@@ -220,5 +221,10 @@ end function
 
 function void set_description(series *s, string description)
     setinfo s --description="@description"
+end function
+
+function scalar mean_percent_return(series prices, scalar days_open)
+    matrix percent_return_days = ({prices}[days_open + 1 : $nobs] ./ {prices}[1 : $nobs - days_open]) .- 1
+    return meanc(percent_return_days)
 end function
 
