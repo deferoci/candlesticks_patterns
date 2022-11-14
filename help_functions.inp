@@ -1,4 +1,175 @@
-function matrix get_return(const bundle b, scalar obs_index, scalar days_p, bool bull[1])
+# Functions for settings
+
+function bundle build_settings_bundle(void)
+    # Not used - Build custom patterns
+    bundle settings = null
+
+    #Build budle patterns
+    #The name of the bundle is the function name
+    bundle hammer = _(id=1, trend=1, name = "hammer")
+    bundle piercing_lines = _(id=2, trend=1, name = "piercing_lines")
+    bundle rising_three = _(id=3, trend=1, name = "rising_three")
+    bundle morning_star = _(id=4, trend=1, name = "morning_star")
+    bundle dark_cloud_cover = _(id=5, trend=0, name = "dark_cloud_cover")
+    bundle falling_three = _(id=6, trend=0, name = "falling_three")
+    bundle evening_star = _(id=7, trend=0, name = "evening_star")
+    bundles patterns_array = defarray(hammer, piercing_lines, rising_three, morning_star, dark_cloud_cover, falling_three, evening_star)
+
+    matrix trend_ranges_matrix = {15, 20, 50} #Fixed by moving averages
+    matrix quantile_ranges_matrix = {30, 60, 130, 260} #6w, 3m, 6m, 1y 
+    matrix days_position_is_open_list = {5,10,15,20,40,60} # 1,2,3,4,8,12 weeks
+
+    bundles settings.patterns = patterns_array
+    matrix settings.trend_ranges = trend_ranges_matrix 
+    matrix settings.quantile_ranges = quantile_ranges_matrix
+    matrix settings.days_position_is_open_list = days_position_is_open_list
+
+    return settings
+end function
+
+function void init(bundle *self, const list L)
+    
+    if sum(!ok(L)) > 0
+        print "WARNING: NA in list in function init()"
+        return 
+    endif
+
+    if !exists(self)
+        self = null
+    endif
+
+    series self.open = L[1]
+    series self.close = L[2]
+    series self.high = L[3]
+    series self.low = L[4]
+    series self.time = time
+
+    series self.body_len = set_body_len(self)
+
+    series self.top_shadow_len = top_shadow_len(self) / (self.body_len + 1)
+    series self.bottom_shadow_len = bottom_shadow_len(self) / (self.body_len + 1)
+
+    series self.body_len_qI = set_quantile(self.body_len, self.quantile_range, 0.25)
+    series self.body_len_qIII = set_quantile(self.body_len, self.quantile_range, 0.75)
+    series self.top_shadow_len_qI = set_quantile(self.top_shadow_len, self.quantile_range, 0.25)
+    series self.top_shadow_len_qIII = set_quantile(self.top_shadow_len, self.quantile_range, 0.75)
+    series self.bottom_shadow_len_qI = set_quantile(self.bottom_shadow_len, self.quantile_range, 0.25)
+    series self.bottom_shadow_len_qIII = set_quantile(self.bottom_shadow_len, self.quantile_range, 0.75)
+
+    series self.trend = trend(self, self.trend_range)
+end function
+
+function series set_quantile(const series s, scalar step, scalar quantile)
+    if step >= $nobs
+        return quantile(s, quantile)
+    endif
+    set skip_missing off
+    L = lags(step, s)
+    L = s || L
+    M = {L}
+    M = M'
+    series ret_s = vec(quantile(M, quantile))
+    scalar first = ret_s[step +1]
+    ret_s = ok(ret_s) ? ret_s : first
+
+    return ret_s
+end function
+
+# Functions for patterns
+
+function series and(const list L)
+    series out = 1
+    loop i=1..nelem(L)
+        out = out && L[i]
+    endloop
+    return out
+end function
+
+function series lag(int t, const series s)
+    return lags(t, s)[t]
+end function
+
+function series mean_price(const bundle d)
+    return (d.open + d.close) / 2
+end function
+
+function series set_body_len(const bundle d)
+    return abs(d.open - d.close)
+end function
+
+function series body_len(const bundle d)
+    return d.body_len
+end function
+
+function series body_top(const bundle d)
+    series higher = d.open > d.close
+    series bt = (higher * d.open) + (!higher * d.close)
+    return bt
+end function
+
+function series body_bottom(const bundle d)
+    series lower_b = d.open < d.close
+    series bt = (lower_b * d.open) + (!lower_b * d.close)
+    return bt
+end function
+
+function series top_shadow_len(const bundle d)
+    return (d.high - body_top(d))
+end function
+
+function series bottom_shadow_len(const bundle d)
+    return (body_bottom(d) - d.low)
+end function
+
+function series is_white(const bundle d)
+    return d.open < d.close
+end function
+
+function series is_body_long(const bundle d)
+    return d.body_len > d.body_len_qIII
+end function
+
+function series is_body_short(const bundle d)
+    return d.body_len < d.body_len_qI
+end function
+
+function series is_bottom_shadow_long(const bundle d)
+    return d.bottom_shadow_len > d.bottom_shadow_len_qIII
+end function
+
+function series is_bottom_shadow_short(const bundle d)
+    return d.bottom_shadow_len < d.bottom_shadow_len_qI
+end function
+
+function series is_top_shadow_long(const bundle d)
+    return d.top_shadow_len > d.top_shadow_len_qIII
+end function
+
+function series is_top_shadow_short(const bundle d)
+    return d.top_shadow_len < d.top_shadow_len_qI
+end function
+
+function series is_doji(const bundle d)
+    return d.open == d.close
+end function
+
+function series find_trend(const series s)
+    series s_lagged = lag(1, s)
+    series trend = sgn(s - s_lagged)
+    return trend
+end function
+
+function series trend(const bundle d, scalar interval)
+    series x = time
+    series y = d.close
+    series loess_approx = loess(y, x, 2, interval/$nobs)
+    trend_f = find_trend(loess_approx)
+    return trend_f
+end function 
+
+# General functions 
+
+function matrix get_returns(const bundle b, scalar obs_index, scalar days_p, bool bull[1])
     scalar days = days_p
     scalar base_index = b.close[obs_index]
     matrix Mh = {b.high}
@@ -33,33 +204,8 @@ function matrix get_return(const bundle b, scalar obs_index, scalar days_p, bool
     return returns 
 end function
 
-function bundle build_bundle_settings(void)
-    bundle settings = null
-
-    #Build budle patterns
-    bundle hammer = _(id=1, trend=1)
-    bundle piercing_lines = _(id=2, trend=1)
-    bundle rising_three = _(id=3, trend=1)
-    bundle morning_star = _(id=4, trend=1)
-    bundle dark_cloud_cover = _(id=5, trend=0)
-    bundle falling_three = _(id=6, trend=0)
-    bundle evening_star = _(id=7, trend=0)
-    bundle b_patterns = _(hammer, piercing_lines, rising_three, morning_star, dark_cloud_cover, falling_three, evening_star)
-
-    matrix m_trend_ranges = {15, 20, 50} #Fissate in base alle medie mobili
-    matrix m_quantile_ranges = {30, 60, 130, 260} #6w, 3m, 6m, 1y 
-    matrix m_return_days = {5,10,15,20,40,60} # 1,2,3,4,8,12 settimane
-
-    settings.patterns = b_patterns
-    settings.trend_ranges = m_trend_ranges 
-    settings.quantile_ranges = m_quantile_ranges
-    settings.return_days = m_return_days
-
-    return settings
-end function
-
 function void print_first_line(void)
-    printf("Stock,Date,Pattern,Trend_range,Quantile_range,Days_return,Return_on_day,Max_return,Max_loss,Max_loss_before\n")
+    printf("stock,date,pattern,trend_range,quantile_range,days_open,profit,max_profit,max_loss,max_loss_before\n")
 end function
 
 function void print_matrix(const matrix M, string sym)
@@ -72,3 +218,13 @@ function void print_matrix(const matrix M, string sym)
         printf("%g\n",M[i,t])
     endloop
 end function 
+
+function void set_description(series *s, string description)
+    setinfo s --description="@description"
+end function
+
+function scalar mean_percent_return(series prices, scalar days_open)
+    matrix percent_return_days = ({prices}[days_open + 1 : $nobs] ./ {prices}[1 : $nobs - days_open]) .- 1
+    return meanc(percent_return_days)
+end function
+

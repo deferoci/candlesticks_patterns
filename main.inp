@@ -1,122 +1,132 @@
-set verbose off
-
 clear
+set verbose off
+set stopwatch
 
 include yahoo_get
 include "help_functions.inp"
-include "help_functions_patterns.inp"
 include "patterns.inp"
 
-open "https://raw.githubusercontent.com/deferoci/Nasdaq100/main/nasdaq_100.csv"
+#set $workdir "path to dir"
 
-strings stocks = array($nobs)
-
-# Build stocks array
-loop i=1..$nobs
-    stocks[i] = CODE[i]
-endloop
-
-clear --dataset
+# Define variables 
+# ================
+# dj.json format:
+# {"list":[{"name": string,"exchange": string,"symbol": string}, ... ]}
+string path_to_bundle_stocks = $workdir ~ "\input_data\dj.json"
 
 # Calculate days from 1950-1-1 to 2022-7-31 and build dataset
 epochStart = epochday(1950,01,01)
 epochEnd = epochday(2022,07,31)
 days = dayspan(epochStart, epochEnd, 5)
-
 nulldata days --preserve
 setobs 5 "1950-01-01"
 series epoch = epochday($obsdate)
 
-bundle settings = build_bundle_settings()
-function_names = getkeys(settings.patterns)
+# To use custom settings or to make new json file
+# use function build_settings_bundle()
+bundle settings = bread(".\input_data\settings.json")
 
-stock_sym = stocks[1]
+# Define patterns for output files
+path_to_results = $workdir ~ "\output_data\patterns.csv"
+path_to_inteval = $workdir ~ "\output_data\intervals.json"
 
-
-outfile "results_candlesticks.csv" --quiet
+outfile "@path_to_results" --quiet
     print_first_line()
 end outfile
 
-outfile "stocks_interval.csv" --quiet
-    printf("Symbol,Start,Stop\n")
-end outfile
+# Define bundles 
+bundle dj = bread(path_to_bundle_stocks)
+bundle stock_infos = null
+bundle intervals_bundle = null
+bundles intervals_bundle.list = array(nelem(dj.list))
+matrix intervals_bundle.days_position_is_open_list = settings.days_position_is_open_list
 
-set stopwatch 
+loop stock_number = 1 .. nelem(dj.list)
+    string stock_sym = dj.list[stock_number].symbol
+    list tmp_stock_prices_list = yahoo_full("@stock_sym")
 
-
-###################
-# Set 1 for tests #
-###################
-
-loop n_stock = 1 .. nelem(stocks)
-    stock_sym = stocks[n_stock]
-    list Lget = yahoo_full("@stock_sym")
-
-    if nelem(Lget) 
-        list L = Lget[2] Lget[3] Lget[4] Lget[5]
-        smpl L --no-missing
-
-        outfile "stocks_interval.csv" --quiet --append
-            printf("%s,%s,%s\n", stock_sym, isodate(epoch[1],1), isodate(epoch[$nobs],1))
-        end outfile
+    if nelem(tmp_stock_prices_list) 
+        list stock_prices_list = tmp_stock_prices_list[2] 
+        stock_prices_list += tmp_stock_prices_list[3] 
+        stock_prices_list += tmp_stock_prices_list[4] 
+        stock_prices_list += tmp_stock_prices_list[5]
+        smpl stock_prices_list --no-missing
         
         outMatrix = {}
 
-        trdR_bigger = 0
-        qntR_bigger = 0
+        trend_range_bigger_obs = 0
+        quantile_range_bigger_obs = 0
 
-        loop trdR = 1 .. nelem(settings.trend_ranges)
-            if settings.trend_ranges[trdR] > $nobs
-                trdR_bigger = 1
+        loop trend_range_index = 1 .. nelem(settings.trend_ranges)
+            # Check trend range selected is lower than observations
+            if settings.trend_ranges[trend_range_index] > $nobs
+                stock_infos.trend_range = $nobs
+                trend_range_bigger_obs = 1
+            else
+                stock_infos.trend_range = settings.trend_ranges[trend_range_index]
             endif
 
-            loop qntR = 1 .. nelem(settings.quantile_ranges) 
-                if settings.quantile_ranges[qntR] > $nobs
-                    qntR_bigger = 1
+
+            loop quantile_range_index = 1 .. nelem(settings.quantile_ranges) 
+                # Check quantile range selected is lower than observations
+                if settings.quantile_ranges[quantile_range_index] > $nobs
+                    stock_infos.quantile_range = $nobs 
+                    quantile_range_bigger_obs = 1
+                else 
+                    stock_infos.quantile_range = settings.quantile_ranges[quantile_range_index]
                 endif
 
-                bundle b = null
+                # Initialize bundle
+                init(&stock_infos, stock_prices_list)
+
+                string intervals_bundle.list[stock_number].symbol = stock_sym
+                string intervals_bundle.list[stock_number].start = isodate(epoch[1],1)
+                string intervals_bundle.list[stock_number].stop = isodate(epoch[$nobs],1)
+                matrix intervals_bundle.list[stock_number].means = {}
+                loop open_days_index = 1 .. nelem(settings.days_position_is_open_list)
+                    scalar curr_open_days = settings.days_position_is_open_list[open_days_index]
+                    intervals_bundle.list[stock_number].means ~= mean_percent_return(stock_infos.close, curr_open_days)
+                endloop 
                 
-                b.trend_range = trdR_bigger ? $nobs : settings.trend_ranges[trdR]
-                b.quantile_range = qntR_bigger ? $nobs : settings.quantile_ranges[qntR]
-                init(&b, L)
-                
-                loop retD = 1 .. nelem(settings.return_days)
-                    loop foreach funN function_names
-                        series temp_series = feval("$funN", b) 
-                        loop i = 1 .. $nobs
-                            if ok(temp_series[i]) && temp_series[i] == 1
-                                bullish = settings.patterns.$funN.trend
-                                matrix M = get_return(b,i,settings.return_days[retD],bullish)
-                                M = {epoch[i],settings.patterns["$funN"].id,trdR,qntR,retD} ~ M
-                                outMatrix = outMatrix | M
+                loop days_position_is_open = 1 .. nelem(settings.days_position_is_open_list)
+                    loop pattern_function_index = 1 .. nelem(settings.patterns)
+                        bundle curr_function_bundle = settings.patterns[pattern_function_index]
+                        series temp_pattern_series = feval(curr_function_bundle.name, stock_infos) 
+                        loop current_obs = 1 .. $nobs
+                            if ok(temp_pattern_series[current_obs]) && temp_pattern_series[current_obs] == 1
+                                trend_is_bullish = curr_function_bundle.trend
+                                # Calculate returns
+                                matrix current_pattern_returns = get_returns(stock_infos,current_obs,settings.days_position_is_open_list[days_position_is_open],trend_is_bullish)
+                                matrix current_pattern_infos = {epoch[current_obs], curr_function_bundle.id, trend_range_index, quantile_range_index, days_position_is_open}
+                                outMatrix = outMatrix | (current_pattern_infos ~ current_pattern_returns)
                             endif
                         endloop
-                        flush
                     endloop
                 endloop
-            if qntR_bigger
+            if quantile_range_bigger_obs
                 break
             endif
             endloop
-        if trdR_bigger
+        if trend_range_bigger_obs
             break
         endif
         endloop
 
-        outfile "results_candlesticks.csv" --quiet --append
+        outfile "@path_to_results" --quiet --append
             print_matrix(outMatrix, stock_sym)
         end outfile
 
     endif
 
-    delete L --force
-    delete Lget --force
-    delete temp_series --force
-    printf("Done %g of %g\n",n_stock,nelem(stocks))
+    delete stock_prices_list --force
+    delete tmp_stock_prices_list --force
+    delete temp_pattern_series --force
 
     smpl full
+    flush
 endloop
+
+bwrite(intervals_bundle, path_to_inteval)
 
 e = $stopwatch
 print e

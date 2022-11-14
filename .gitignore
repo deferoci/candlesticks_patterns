@@ -1,0 +1,7 @@
+session.inp
+test.inp
+string_table.txt
+row_results/
+latex_tables/
+*.csv
+*.xlsx
